@@ -1,0 +1,16 @@
+.codex
+.env
+.DS_Store
+
+# Clojure build and dependency caches
+.cpcache/
+.clj-kondo/
+.lsp/
+.nrepl-port
+.shadow-cljs/
+.cider-repl-history
+.rebel_readline_history
+.calva/
+target/
+classes/
+out/
