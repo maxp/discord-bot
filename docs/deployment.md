@@ -14,6 +14,6 @@
 ## Минимальный операционный чеклист
 
 - bot token и прочие secrets не лежат в репозитории;
-- production intents и install settings совпадают с ожидаемым поведением;
+- production intents, `USER_INSTALL`, install settings и command contexts совпадают с DM-only поведением;
 - после запуска бот виден online и отвечает на базовую команду;
 - есть понятный способ проверить reconnect и startup failures.

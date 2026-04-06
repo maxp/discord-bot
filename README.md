@@ -22,3 +22,8 @@ This repository contains a Discord bot project in Clojure.
 - [docs/troubleshooting.md](docs/troubleshooting.md): типовые сбои и способы диагностики.
 - [docs/decisions/0001-library-choice.md](docs/decisions/0001-library-choice.md): ADR по выбору библиотеки.
 - [docs/decisions/0002-interactions-over-message-content.md](docs/decisions/0002-interactions-over-message-content.md): ADR по выбору interactions как основного интерфейса.
+
+## Stack Notes
+
+- Discord runtime строится на `JDA` через Java interop из Clojure.
+- Бот ориентирован на `Gateway`, `USER_INSTALL` и `BOT_DM` only.
