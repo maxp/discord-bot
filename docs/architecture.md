@@ -26,7 +26,8 @@
 
 - [src/discord_bot/main.clj](/home/maxp/wrk/discord-bot/src/discord_bot/main.clj) запускает mount-based lifecycle;
 - [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj) поднимает и останавливает runtime;
-- [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и command registration.
+- [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и command registration;
+- [src/discord_bot/discord/http_proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/http_proxy.clj) содержит parsing и применение HTTP proxy settings к JDA REST и Gateway/WebSocket transport.
 
 ## Критичные вопросы
 

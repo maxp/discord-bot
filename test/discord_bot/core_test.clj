@@ -1,6 +1,7 @@
 (ns discord-bot.core-test
   (:require [clojure.test :refer [deftest is]]
             [discord-bot.config :as config]
+            [discord-bot.discord.http-proxy :as http-proxy]
             [discord-bot.discord.jda :as jda]
             [discord-bot.main :as main]))
 
@@ -32,17 +33,17 @@
           :port 8080
           :username "alice"
           :password "secret"}
-         (select-keys (jda/parse-proxy-url "http://alice:secret@proxy.local:8080")
+         (select-keys (http-proxy/parse-proxy-url "http://alice:secret@proxy.local:8080")
                       [:scheme :host :port :username :password])))
   (is (= {:scheme "https"
           :host "secure-proxy.local"
           :port 443
           :username nil
           :password nil}
-         (select-keys (jda/parse-proxy-url "https://secure-proxy.local")
+         (select-keys (http-proxy/parse-proxy-url "https://secure-proxy.local")
                       [:scheme :host :port :username :password])))
   (let [ex (try
-             (jda/parse-proxy-url "socks5://proxy.local:1080")
+             (http-proxy/parse-proxy-url "socks5://proxy.local:1080")
              nil
              (catch clojure.lang.ExceptionInfo ex
                ex))]

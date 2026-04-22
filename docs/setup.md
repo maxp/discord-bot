@@ -71,7 +71,7 @@
 
 - приложение подключается к Discord Gateway через `JDA`;
 - минимальная команда `/ping` регистрируется как `USER_INSTALL` и `BOT_DM` only;
-- если задан `HTTPS_PROXY` или `HTTP_PROXY`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport;
+- если задан `HTTPS_PROXY` или `HTTP_PROXY`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport через [src/discord_bot/discord/http_proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/http_proxy.clj);
 - listener registration и command registration находятся в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
 
 ## Полезные ссылки

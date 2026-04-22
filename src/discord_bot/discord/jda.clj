@@ -1,17 +1,26 @@
 (ns discord-bot.discord.jda
   (:require
-    [clojure.string :as str])
+   [discord-bot.discord.http-proxy :as http-proxy])
   (:import
-    (com.neovisionaries.ws.client WebSocketFactory)
-    (java.net InetSocketAddress Proxy Proxy$Type URI)
-    (java.util EnumSet List)
-    (net.dv8tion.jda.api JDA JDABuilder)
-    (net.dv8tion.jda.api.events.interaction.command SlashCommandInteractionEvent)
-    (net.dv8tion.jda.api.events.session ReadyEvent)
-    (net.dv8tion.jda.api.hooks ListenerAdapter)
-    (net.dv8tion.jda.api.interactions IntegrationType InteractionContextType)
-    (net.dv8tion.jda.api.interactions.commands.build CommandData Commands)
-    (okhttp3 Authenticator Credentials OkHttpClient$Builder)))
+   (java.util EnumSet List Collection)
+   (net.dv8tion.jda.api JDA JDABuilder)
+   (net.dv8tion.jda.api.entities User)
+   (net.dv8tion.jda.api.events.interaction.command SlashCommandInteractionEvent)
+   (net.dv8tion.jda.api.events.message MessageReceivedEvent)
+   (net.dv8tion.jda.api.events.session ReadyEvent)
+   (net.dv8tion.jda.api.hooks ListenerAdapter)
+   (net.dv8tion.jda.api.interactions IntegrationType InteractionContextType)
+   (net.dv8tion.jda.api.interactions.commands.build CommandData Commands)
+   (net.dv8tion.jda.api.components.actionrow ActionRow)
+   (net.dv8tion.jda.api.components.buttons Button)
+   (net.dv8tion.jda.api.entities.channel.middleman MessageChannel)
+   (net.dv8tion.jda.api.requests.restaction CacheRestAction MessageCreateAction)
+   (java.util.concurrent TimeoutException TimeUnit)))
+
+
+(set! *warn-on-reflection* true)
+
+(def ^:private send-message-timeout-seconds 10)
 
 
 (defn ping-command-data
@@ -21,107 +30,12 @@
     (.setContexts (EnumSet/of InteractionContextType/BOT_DM))))
 
 
-(defn- default-port
-  [scheme]
-  (case (some-> scheme str/lower-case)
-    "https" 443
-    "http" 80
-    nil))
-
-
-(defn parse-proxy-url
-  [proxy-url]
-  (when (seq proxy-url)
-    (let [uri (URI. proxy-url)
-          scheme (.getScheme uri)
-          host (.getHost uri)
-          port (let [raw-port (.getPort uri)]
-                 (if (neg? raw-port)
-                   (default-port scheme)
-                   raw-port))
-          [username password] (when-let [user-info (.getUserInfo uri)]
-                                (str/split user-info #":" 2))]
-      (when-not (#{"http" "https"} (some-> scheme str/lower-case))
-        (throw (ex-info "Proxy URL must use http or https scheme"
-                        {:proxy-url proxy-url})))
-      (when-not host
-        (throw (ex-info "Proxy URL must include a host"
-                        {:proxy-url proxy-url})))
-      (when-not port
-        (throw (ex-info "Proxy URL must include a port or use a default for http/https"
-                        {:proxy-url proxy-url})))
-      {:url proxy-url
-       :uri uri
-       :scheme scheme
-       :host host
-       :port port
-       :username username
-       :password password})))
-
-
-(defn proxy-config-from-env
-  []
-  (or (some-> (System/getenv "HTTPS_PROXY") parse-proxy-url)
-      (some-> (System/getenv "https_proxy") parse-proxy-url)
-      (some-> (System/getenv "HTTP_PROXY") parse-proxy-url)
-      (some-> (System/getenv "http_proxy") parse-proxy-url)))
-
-
 (defn- require-bot-token!
   [discord-bot-token]
   (when-not (seq discord-bot-token)
     (throw (ex-info "DISCORD_BOT_TOKEN must be set before starting JDA"
                     {:env-var "DISCORD_BOT_TOKEN"})))
   discord-bot-token)
-
-
-(defn- proxy-authenticator
-  [{:keys [username password]}]
-  (when username
-    (reify Authenticator
-      (authenticate
-        [_ _ response]
-        (when-not (.header response "Proxy-Authorization")
-          (-> response
-              (.request)
-              (.newBuilder)
-              (.header "Proxy-Authorization"
-                       (Credentials/basic username (or password "")))
-              (.build)))))))
-
-
-(defn- http-client-builder
-  [{:keys [host port] :as proxy-config}]
-  (let [builder (doto (OkHttpClient$Builder.)
-                  (.proxy (Proxy. Proxy$Type/HTTP
-                                  (InetSocketAddress. host (int port)))))]
-    (when-let [authenticator (proxy-authenticator proxy-config)]
-      (.proxyAuthenticator builder authenticator))
-    builder))
-
-
-(defn- websocket-factory
-  [{:keys [uri username password]}]
-  (let [factory (WebSocketFactory.)
-        settings (.getProxySettings factory)]
-    (.setServer settings uri)
-    (when username
-      (.setCredentials settings username (or password "")))
-    factory))
-
-
-(defn- apply-proxy
-  [^JDABuilder builder log-fn]
-  (if-let [proxy-config (proxy-config-from-env)]
-    (do
-      (log-fn ["configuring proxy for Discord transport"
-               {:host (:host proxy-config)
-                :port (:port proxy-config)
-                :scheme (:scheme proxy-config)}])
-      (doto builder
-        (.setHttpClientBuilder (http-client-builder proxy-config))
-        (.setWebsocketFactory (websocket-factory proxy-config))))
-    builder))
 
 
 (defn- register-commands!
@@ -145,19 +59,68 @@
       (case (.getName event)
         "ping" (-> (.reply event "pong")
                    (.queue))
-        nil))))
+        nil))
+
+    (onMessageReceived
+      [^MessageReceivedEvent event]
+      (when-not (.. event getAuthor isBot)
+        (let [content (.. event getMessage getContentRaw)]
+          (log-fn ["message received"
+                   {:author (.. event getAuthor getName)
+                    :content content}]))))))
+
+;; (.. event getAuthor getId)   ;; "123456789012345678"
+;; (.. event getMessage getContentRaw)   ;; "@Max hello"
+
 
 
 (defn connect!
   [{:keys [discord-bot-token]} log-fn]
-  (-> (JDABuilder/createDefault (require-bot-token! discord-bot-token))
-      (apply-proxy log-fn)
-      (.addEventListeners (into-array Object [(create-listener log-fn)]))
-      (.build)
-      (.awaitReady)))
+  (let [builder (doto (JDABuilder/createDefault (require-bot-token! discord-bot-token))
+                  #(http-proxy/apply-to-builder % log-fn)
+                  #(.addEventListeners ^JDABuilder % (into-array Object [(create-listener log-fn)])))]
+    (.awaitReady ^JDA (.build ^JDABuilder builder))))
 
 
 (defn disconnect!
   [^JDA jda]
   (when jda
     (.shutdown jda)))
+
+
+(defn- ->button
+  [{:keys [id label style]}]
+  (let [style-kw (or style :primary)
+        ^String id-str (name id)
+        ^String label-str (str label)]
+    (case style-kw
+      :primary   (. Button (primary id-str label-str))
+      :secondary (. Button (secondary id-str label-str))
+      :success   (. Button (success id-str label-str))
+      :danger    (. Button (danger id-str label-str))
+      :link      (. Button (link id-str label-str))
+      (. Button (primary id-str label-str)))))
+
+
+(defn send-message
+  "Send a text message to a user via DM.
+   buttons - optional vector of button maps with keys: :id, :label, :style (optional, defaults to :primary).
+   Returns {:ok true :data msg} on success, {:ok false :error err} on failure."
+  ([^JDA jda ^String user-id ^String text]
+   (send-message jda user-id text nil))
+  ([^JDA jda ^String user-id ^String text buttons]
+    (try
+      (let [^User user (.retrieveUserById ^JDA jda user-id)
+            ^CacheRestAction channel-rest (.openPrivateChannel user)
+            ^MessageChannel channel (.complete channel-rest)
+            action (cond-> (.sendMessage channel text)
+                     (seq buttons)
+                     (.setComponents ^java.util.List (java.util.Collections/singletonList
+                                                      (ActionRow/of ^Collection (mapv ->button buttons)))))
+            future (.submit ^MessageCreateAction action)
+            msg (.get future send-message-timeout-seconds TimeUnit/SECONDS)]
+        {:ok true :data msg})
+      (catch TimeoutException e
+        {:ok false :error e})
+      (catch Exception e
+        {:ok false :error e}))))
