@@ -1,11 +1,15 @@
-(ns discord-bot.discord.http-proxy
+(ns discord-bot.http.core
   (:require
    [clojure.string :as str])
   (:import
    (com.neovisionaries.ws.client WebSocketFactory)
    (java.net InetSocketAddress Proxy Proxy$Type URI)
+   (java.util.concurrent TimeUnit)
    (net.dv8tion.jda.api JDABuilder)
-   (okhttp3 Authenticator Credentials OkHttpClient$Builder)))
+   (okhttp3 Authenticator Credentials OkHttpClient$Builder Response)))
+
+
+(set! *warn-on-reflection* true)
 
 
 (defn- default-port
@@ -17,8 +21,8 @@
 
 
 (defn parse-proxy-url
-  [proxy-url]
-  (when (seq proxy-url)
+  [^String proxy-url]
+  (when (not-empty proxy-url)
     (let [uri (URI. proxy-url)
           scheme (.getScheme uri)
           host (.getHost uri)
@@ -46,58 +50,49 @@
        :password password})))
 
 
-(defn proxy-config-from-env
-  []
-  (or (some-> (System/getenv "HTTPS_PROXY") parse-proxy-url)
-      (some-> (System/getenv "https_proxy") parse-proxy-url)
-      (some-> (System/getenv "HTTP_PROXY") parse-proxy-url)
-      (some-> (System/getenv "http_proxy") parse-proxy-url)))
-
-
 (defn- proxy-authenticator
   [{:keys [username password]}]
   (when username
     (reify Authenticator
       (authenticate
         [_ _ response]
-        (when-not (.header response "Proxy-Authorization")
-          (-> response
-              (.request)
+        (when-not (.header ^Response response "Proxy-Authorization")
+          (-> (.request ^Response response)
               (.newBuilder)
               (.header "Proxy-Authorization"
-                       (Credentials/basic username (or password "")))
+                       (Credentials/basic ^String username (or ^String password "")))
               (.build)))))))
 
 
-(defn- http-client-builder
-  [{:keys [host port] :as proxy-config}]
-  (let [builder (doto (OkHttpClient$Builder.)
-                  (.proxy (Proxy. Proxy$Type/HTTP
-                                  (InetSocketAddress. ^String host ^int port))))]
+(defn- base-http-client-builder [timeout]
+  (doto (OkHttpClient$Builder.)
+    (.connectTimeout timeout TimeUnit/SECONDS)
+    (.readTimeout    timeout TimeUnit/SECONDS)
+    (.writeTimeout   timeout TimeUnit/SECONDS)))
+
+
+(defn- http-client-builder [{:keys [host port] :as proxy-config} timeout]
+  (let [^OkHttpClient$Builder builder (doto ^OkHttpClient$Builder (base-http-client-builder timeout)
+                                        (.proxy (Proxy. Proxy$Type/HTTP
+                                                        (InetSocketAddress. ^String host ^int port))))]
     (when-let [authenticator (proxy-authenticator proxy-config)]
       (.proxyAuthenticator builder authenticator))
     builder))
 
 
-(defn- websocket-factory
-  [{:keys [uri username password]}]
+(defn- websocket-factory [{:keys [^URI uri ^String username ^String password]}]
   (let [factory (WebSocketFactory.)
         settings (.getProxySettings factory)]
-    (.setServer settings ^URI uri)
+    (.setServer settings uri)
     (when username
       (.setCredentials settings username (or password "")))
     factory))
 
 
-(defn apply-to-builder
-  [^JDABuilder builder log-fn]
-  (if-let [proxy-config (proxy-config-from-env)]
-    (do
-      (log-fn ["configuring proxy for Discord transport"
-               {:host (:host proxy-config)
-                :port (:port proxy-config)
-                :scheme (:scheme proxy-config)}])
-      (doto builder
-        (.setHttpClientBuilder (http-client-builder proxy-config))
-        (.setWebsocketFactory (websocket-factory proxy-config))))
-    builder))
+(defn apply-to-builder [^JDABuilder builder ^String proxy-url timeout]
+  (if-let [proxy-config (parse-proxy-url proxy-url)]
+    (doto builder
+      (.setHttpClientBuilder (http-client-builder proxy-config timeout))
+      (.setWebsocketFactory (websocket-factory proxy-config)))
+    (doto builder
+      (.setHttpClientBuilder (base-http-client-builder timeout)))))

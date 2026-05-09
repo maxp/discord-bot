@@ -1,7 +1,7 @@
 (ns discord-bot.core-test
   (:require [clojure.test :refer [deftest is]]
             [discord-bot.config :as config]
-            [discord-bot.discord.http-proxy :as http-proxy]
+            [discord-bot.http.core :as http]
             [discord-bot.discord.jda :as jda]
             [discord-bot.main :as main]))
 
@@ -33,17 +33,17 @@
           :port 8080
           :username "alice"
           :password "secret"}
-         (select-keys (http-proxy/parse-proxy-url "http://alice:secret@proxy.local:8080")
+         (select-keys (http/parse-proxy-url "http://alice:secret@proxy.local:8080")
                       [:scheme :host :port :username :password])))
   (is (= {:scheme "https"
           :host "secure-proxy.local"
           :port 443
           :username nil
           :password nil}
-         (select-keys (http-proxy/parse-proxy-url "https://secure-proxy.local")
+         (select-keys (http/parse-proxy-url "https://secure-proxy.local")
                       [:scheme :host :port :username :password])))
   (let [ex (try
-             (http-proxy/parse-proxy-url "socks5://proxy.local:1080")
+             (http/parse-proxy-url "socks5://proxy.local:1080")
              nil
              (catch clojure.lang.ExceptionInfo ex
                ex))]
@@ -57,12 +57,12 @@
 
 (deftest connect-fails-fast-on-missing-token
   (let [ex (try
-             (jda/connect! {:discord-bot-token nil} (fn [_] nil))
+             (jda/connect! {:discord-bot-token nil} {})
              nil
              (catch clojure.lang.ExceptionInfo ex
                ex))]
     (is ex)
-    (is (= "DISCORD_BOT_TOKEN must be set before starting JDA"
+    (is (= "discord-bot-token is empty"
            (ex-message ex)))
-    (is (= {:env-var "DISCORD_BOT_TOKEN"}
+    (is (= {}
            (ex-data ex)))))

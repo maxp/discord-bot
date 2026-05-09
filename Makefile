@@ -27,3 +27,4 @@ lint:
 
 outdated:
 	set -a; . ./.env; set +a; clojure -M:outdated
+

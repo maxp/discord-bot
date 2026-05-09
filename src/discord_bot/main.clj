@@ -6,6 +6,8 @@
     [mount.core :as mount]
     [taoensso.telemere :refer [log!]]))
 
+(set! *warn-on-reflection* true)
+
 
 (defn -main
   [& _args]

@@ -43,8 +43,7 @@
 
 Опционально:
 
-- `HTTPS_PROXY` для проксирования Discord REST и Gateway traffic;
-- `HTTP_PROXY` как fallback, если `HTTPS_PROXY` не задан.
+- `DISCORD_PROXY_URL` для проксирования Discord REST и Gateway traffic через `http` или `https` URL.
 
 Локальное окружение проекта хранится в `.env`.
 Если появятся дополнительные интеграции, добавлять их сюда, а не держать только в коде.
@@ -71,7 +70,7 @@
 
 - приложение подключается к Discord Gateway через `JDA`;
 - минимальная команда `/ping` регистрируется как `USER_INSTALL` и `BOT_DM` only;
-- если задан `HTTPS_PROXY` или `HTTP_PROXY`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport через [src/discord_bot/discord/http_proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/http_proxy.clj);
+- если задан `DISCORD_PROXY_URL`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport через [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj);
 - listener registration и command registration находятся в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
 
 ## Полезные ссылки

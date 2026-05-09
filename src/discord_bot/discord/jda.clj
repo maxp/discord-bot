@@ -1,21 +1,24 @@
 (ns discord-bot.discord.jda
   (:require
-   [discord-bot.discord.http-proxy :as http-proxy])
+   [taoensso.telemere :refer [log!]]
+   [discord-bot.http.core :as http])
   (:import
    (java.util EnumSet List Collection)
+   (java.util.concurrent CompletableFuture TimeoutException TimeUnit)
    (net.dv8tion.jda.api JDA JDABuilder)
    (net.dv8tion.jda.api.entities User)
    (net.dv8tion.jda.api.events.interaction.command SlashCommandInteractionEvent)
+   (net.dv8tion.jda.api.events.interaction.component ButtonInteractionEvent)
    (net.dv8tion.jda.api.events.message MessageReceivedEvent)
-   (net.dv8tion.jda.api.events.session ReadyEvent)
+   (net.dv8tion.jda.api.events StatusChangeEvent)
+   (net.dv8tion.jda.api.events.session ReadyEvent SessionDisconnectEvent ShutdownEvent)
    (net.dv8tion.jda.api.hooks ListenerAdapter)
    (net.dv8tion.jda.api.interactions IntegrationType InteractionContextType)
    (net.dv8tion.jda.api.interactions.commands.build CommandData Commands)
    (net.dv8tion.jda.api.components.actionrow ActionRow)
    (net.dv8tion.jda.api.components.buttons Button)
    (net.dv8tion.jda.api.entities.channel.middleman MessageChannel)
-   (net.dv8tion.jda.api.requests.restaction CacheRestAction MessageCreateAction)
-   (java.util.concurrent TimeoutException TimeUnit)))
+   (net.dv8tion.jda.api.requests.restaction CacheRestAction MessageCreateAction)))
 
 
 (set! *warn-on-reflection* true)
@@ -23,62 +26,69 @@
 (def ^:private send-message-timeout-seconds 10)
 
 
-(defn ping-command-data
-  []
+(defn ping-command-data []
   (doto (Commands/slash "ping" "Basic health check for the bot")
     (.setIntegrationTypes (EnumSet/of IntegrationType/USER_INSTALL))
     (.setContexts (EnumSet/of InteractionContextType/BOT_DM))))
 
 
-(defn- require-bot-token!
-  [discord-bot-token]
+(defn- require-bot-token! [discord-bot-token]
   (when-not (seq discord-bot-token)
-    (throw (ex-info "DISCORD_BOT_TOKEN must be set before starting JDA"
-                    {:env-var "DISCORD_BOT_TOKEN"})))
+    (throw (ex-info "discord-bot-token is empty" {})))
   discord-bot-token)
 
 
-(defn- register-commands!
-  [^JDA jda]
-  (-> (.updateCommands jda)
-      (.addCommands (List/of ^CommandData (ping-command-data)))
-      (.queue)))
-
-
-(defn create-listener
-  [log-fn]
+(defn create-listener [{:keys [on-message on-button]}]
   (proxy [ListenerAdapter] []
-    (onReady
-      [^ReadyEvent event]
-      (log-fn ["discord gateway ready"
-               {:self-user (.. event getJDA getSelfUser getName)}])
-      (register-commands! (.getJDA event)))
+    
+    (onReady [^ReadyEvent event]
+      (log! ["discord state" (.getState event)]))
+    
+    (onButtonInteraction [^ButtonInteractionEvent event]
+      (-> (.deferEdit event)
+          (.queue))
+      (when on-button
+        (let [button-id  (.getComponentId event)
+              message-id (.getMessageId event)
+              user-id    (.. event getUser getId)]
+          (on-button {:event      event
+                      :button-id  button-id
+                      :message-id message-id
+                      :user-id    user-id}))))
 
-    (onSlashCommandInteraction
-      [^SlashCommandInteractionEvent event]
-      (case (.getName event)
-        "ping" (-> (.reply event "pong")
-                   (.queue))
-        nil))
+    (onSessionDisconnect [^SessionDisconnectEvent event]
+      (log! :warn ["discord session disconnected"
+                   {:close-code          (some-> (.getCloseCode event) str)
+                    :service-server-close (.isClosedByServer event)}]))
 
-    (onMessageReceived
-      [^MessageReceivedEvent event]
-      (when-not (.. event getAuthor isBot)
-        (let [content (.. event getMessage getContentRaw)]
-          (log-fn ["message received"
-                   {:author (.. event getAuthor getName)
-                    :content content}]))))))
+    (onShutdown [^ShutdownEvent event]
+      (log! :warn ["discord gateway shutdown"
+                   {:close-code    (some-> (.getCloseCode event) str)
+                    :shutdown-time (str (.getTimeShutdown event))}]))
+
+    (onStatusChange [^StatusChangeEvent event]
+      (log! ["discord status changed"
+             {:old (str (.getOldValue event))
+              :new (str (.getNewValue event))}]))
+
+    (onMessageReceived [^MessageReceivedEvent event]
+      (when on-message
+        (let [^User author (.getAuthor event)]
+          (when-not (.isBot author)
+            (let [content (.. event getMessage getContentRaw)
+                  user-id (.getId author)]
+              (on-message {:event   event
+                           :user-id user-id
+                           :content content}))))))))
 
 ;; (.. event getAuthor getId)   ;; "123456789012345678"
 ;; (.. event getMessage getContentRaw)   ;; "@Max hello"
 
 
-
-(defn connect!
-  [{:keys [discord-bot-token]} log-fn]
+(defn connect! [{:keys [discord-bot-token discord-proxy-url discord-timeout]} handlers]
   (let [builder (doto (JDABuilder/createDefault (require-bot-token! discord-bot-token))
-                  #(http-proxy/apply-to-builder % log-fn)
-                  #(.addEventListeners ^JDABuilder % (into-array Object [(create-listener log-fn)])))]
+                  (http/apply-to-builder discord-proxy-url discord-timeout)
+                  (.addEventListeners (into-array Object [(create-listener handlers)])))]
     (.awaitReady ^JDA (.build ^JDABuilder builder))))
 
 
@@ -109,18 +119,18 @@
   ([^JDA jda ^String user-id ^String text]
    (send-message jda user-id text nil))
   ([^JDA jda ^String user-id ^String text buttons]
-    (try
-      (let [^User user (.retrieveUserById ^JDA jda user-id)
-            ^CacheRestAction channel-rest (.openPrivateChannel user)
-            ^MessageChannel channel (.complete channel-rest)
-            action (cond-> (.sendMessage channel text)
-                     (seq buttons)
-                     (.setComponents ^java.util.List (java.util.Collections/singletonList
-                                                      (ActionRow/of ^Collection (mapv ->button buttons)))))
-            future (.submit ^MessageCreateAction action)
-            msg (.get future send-message-timeout-seconds TimeUnit/SECONDS)]
-        {:ok true :data msg})
-      (catch TimeoutException e
-        {:ok false :error e})
-      (catch Exception e
-        {:ok false :error e}))))
+   (try
+     (let [^User user (.complete ^CacheRestAction (.retrieveUserById ^JDA jda user-id))
+           ^CacheRestAction channel-rest (.openPrivateChannel user)
+           ^MessageChannel channel (.complete channel-rest)
+           action (cond-> (.sendMessage channel text)
+                    (seq buttons)
+                    (.setComponents ^java.util.List (java.util.Collections/singletonList
+                                                     (ActionRow/of ^Collection (mapv ->button buttons)))))
+           future (.submit ^MessageCreateAction action)
+           msg (.get ^CompletableFuture future send-message-timeout-seconds TimeUnit/SECONDS)]
+       {:ok true :data msg})
+     (catch TimeoutException e
+       {:ok false :error e})
+     (catch Exception e
+       {:ok false :error e}))))

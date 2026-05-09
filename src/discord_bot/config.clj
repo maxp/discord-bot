@@ -1,38 +1,23 @@
 (ns discord-bot.config
   (:require
-    [clojure.edn :as edn]
-    [clojure.java.io :as io]))
-
-
-(defn- env-raw
-  [name]
-  (some-> (System/getenv name) not-empty))
+   [clojure.edn :as edn]
+   [clojure.java.io :as io]))
 
 
 (defn- env-str
   ([name]
-   (env-raw name))
+   (env-str name nil))
   ([name default]
-   (or (env-raw name) default)))
+   (or (System/getenv name) default)))
 
 
-(defn- env-int
-  ([name]
-   (some-> (env-raw name) parse-long))
-  ([name default]
-   (or (env-int name) default)))
-
-
-(defn build-info
-  []
+(defn build-info []
   (-> "build-info.edn" io/resource slurp edn/read-string))
 
 
-(defn load-config
-  []
+(defn load-config []
   {:discord-bot-token (env-str "DISCORD_BOT_TOKEN")
-   :discord-application-id (env-str "DISCORD_APPLICATION_ID")
-   :discord-public-key (env-str "DISCORD_PUBLIC_KEY")
-   :discord-http-host (env-str "DISCORD_HTTP_HOST" "localhost")
-   :discord-http-port (env-int "DISCORD_HTTP_PORT" 8004)
+   :discord-app-id    (env-str "DISCORD_APP_ID")
+   :discord-proxy-url (env-str "DISCORD_PROXY_URL")
+   :discord-timeout   (parse-long (env-str "DISCORD_TIMEOUT" "20"))
    :build-info (build-info)})

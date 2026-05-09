@@ -21,6 +21,7 @@
 - Keep two blank lines between top-level functions.
 - Prefer small, explicit functions over unnecessary abstractions.
 - Preserve existing namespace and file naming conventions.
+- Use `(not-empty s)` instead of `(seq s)` to check for non-empty strings — it avoids creating a character sequence and expresses intent clearly.
 
 ## Validation
 
