@@ -1,4 +1,4 @@
-(ns discord-bot.http.core
+(ns discord-bot.discord.proxy
   (:require
    [clojure.string :as str])
   (:import
@@ -6,7 +6,7 @@
    (java.net InetSocketAddress Proxy Proxy$Type URI URISyntaxException)
    (java.util.concurrent TimeUnit)
    (net.dv8tion.jda.api JDABuilder)
-   (okhttp3 Authenticator Credentials OkHttpClient$Builder Response)))
+   (okhttp3 Authenticator Credentials OkHttpClient OkHttpClient$Builder Response)))
 
 
 (set! *warn-on-reflection* true)
@@ -98,6 +98,16 @@
     (when username
       (.setCredentials settings username (or password "")))
     factory))
+
+
+(defn okhttp-client-builder [^String proxy-url timeout]
+  (if-let [proxy-config (parse-proxy-url proxy-url)]
+    (http-client-builder proxy-config timeout)
+    (base-http-client-builder timeout)))
+
+
+(defn okhttp-client ^OkHttpClient [^String proxy-url timeout]
+  (.build ^OkHttpClient$Builder (okhttp-client-builder proxy-url timeout)))
 
 
 (defn apply-to-builder [^JDABuilder builder ^String proxy-url timeout]

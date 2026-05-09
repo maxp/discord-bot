@@ -49,5 +49,5 @@
 Как проверить:
 
 - поддерживаются только `http` и `https`;
-- parsing выполняет `discord-bot.http.core/parse-proxy-url`;
+- parsing выполняет `discord-bot.discord.proxy/parse-proxy-url`;
 - для URL без port используются default ports `80` для `http` и `443` для `https`.

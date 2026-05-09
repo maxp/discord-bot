@@ -16,8 +16,12 @@
 
 
 (defn load-config []
-  {:discord-bot-token (env-str "DISCORD_BOT_TOKEN")
-   :discord-app-id    (env-str "DISCORD_APP_ID")
-   :discord-proxy-url (env-str "DISCORD_PROXY_URL")
-   :discord-timeout   (parse-long (env-str "DISCORD_TIMEOUT" "20"))
+  {:discord-bot-token     (env-str "DISCORD_BOT_TOKEN")
+   :discord-app-id        (env-str "DISCORD_APP_ID")
+   :discord-app-secret    (env-str "DISCORD_APP_SECRET")
+   :discord-proxy-url     (env-str "DISCORD_PROXY_URL")
+   :discord-timeout       (parse-long (env-str "DISCORD_TIMEOUT" "20"))
+   :discord-callback-url  (env-str "DISCORD_CALLBACK_URL")
+   :discord-callback-host (env-str "DISCORD_CALLBACK_HOST" "localhost")
+   :discord-callback-port (parse-long (env-str "DISCORD_CALLBACK_PORT" "8131"))
    :build-info build-info})

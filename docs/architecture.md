@@ -26,7 +26,9 @@
 - [src/discord_bot/main.clj](/home/maxp/wrk/discord-bot/src/discord_bot/main.clj) запускает mount-based lifecycle;
 - [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj) поднимает и останавливает runtime;
 - [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и helper для отправки DM;
-- [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj) содержит parsing и применение HTTP proxy settings к JDA REST и Gateway/WebSocket transport;
+- [src/discord_bot/http/callback.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/callback.clj) содержит HTTP-сервер для обработки OAuth2 callback на порту `8131`;
+- [src/discord_bot/discord/api.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/api.clj) содержит прямые Discord REST-вызовы для OAuth2 и user API;
+- [src/discord_bot/discord/proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/proxy.clj) содержит parsing и применение HTTP proxy settings к JDA REST, Gateway/WebSocket transport и прямому OkHttp REST client;
 - [src/discord_bot/config.clj](/home/maxp/wrk/discord-bot/src/discord_bot/config.clj) читает runtime config из environment и `build-info.edn` из classpath resource.
 
 Текущий поток запуска:

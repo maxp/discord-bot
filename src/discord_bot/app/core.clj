@@ -1,6 +1,7 @@
 (ns discord-bot.app.core
   (:require
    [discord-bot.discord.jda :as jda]
+   [discord-bot.http.callback :as callback]
    [mount.core :refer [args defstate]]
    [taoensso.telemere :refer [log!]])
   (:import
@@ -10,7 +11,7 @@
 (set! *warn-on-reflection* true)
 
 
-(def handlers 
+(def handlers
   {:on-message (fn [p] (prn "on-message:" p))
    :on-button  (fn [p] (prn "on-button:" p))
    })
@@ -28,11 +29,19 @@
 
 (defstate conn
   :start (let [cfg (args)
-               _ (log! ["starting bot:" {:app-id (:discord-app-id cfg)}])
-               ^JDA connection (jda/connect! cfg handlers)]
+                _ (log! ["starting bot:" {:app-id (:discord-app-id cfg)}])
+                ^JDA connection (jda/connect! cfg handlers)]
            (log! ["jda connection status:" (str (.getStatus connection))])
            connection)
   :stop (do
           (log! ["stopping bot runtime:" conn])
           (when conn
             (jda/disconnect! conn))))
+
+
+(defstate http-server
+  :start (let [cfg  (args)
+                host (:discord-callback-host cfg)
+                port (:discord-callback-port cfg)]
+           (callback/start! host port))
+  :stop (callback/stop! http-server))

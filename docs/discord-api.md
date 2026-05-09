@@ -54,4 +54,9 @@
 - Сейчас listener обрабатывает `ReadyEvent`, `StatusChangeEvent`, `SessionDisconnectEvent`, `ShutdownEvent`, `MessageReceivedEvent` и `ButtonInteractionEvent`.
 - `MessageReceivedEvent` игнорирует сообщения от bot users и читает raw content через `getContentRaw`.
 - `ButtonInteractionEvent` вызывает `deferEdit` перед передачей события в app handler.
-- `DISCORD_PROXY_URL`, если задан, применяется к REST HTTP client и WebSocket factory через [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj).
+- `DISCORD_PROXY_URL`, если задан, применяется к REST HTTP client и WebSocket factory через [src/discord_bot/discord/proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/proxy.clj).
+- Прямые Discord REST-вызовы находятся в [src/discord_bot/discord/api.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/api.clj); reusable API client создается через `discord-bot.discord.api/create-client`; OAuth2 credentials (`client_id`, `client_secret`, `redirect_uri`) берутся из конфигурации;
+- OAuth2 callback обрабатывается HTTP-сервером [src/discord_bot/http/callback.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/callback.clj) на `DISCORD_CALLBACK_HOST:DISCORD_CALLBACK_PORT` (default: `localhost:8131`); endpoint `GET /discord/callback` принимает `code` и `state`, обменивает code на access token и возвращает HTML-ответ пользователю;
+- `POST /oauth2/token` используется для обмена authorization code на access token; Discord требует `application/x-www-form-urlencoded` body и поддерживает HTTP Basic auth для `client_id:client_secret`.
+- `GET /users/@me` используется с OAuth2 bearer access token и требует scope `identify`.
+- JSON responses разбираются через `jsonista` с keyword keys.

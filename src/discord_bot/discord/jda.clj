@@ -1,9 +1,9 @@
 (ns discord-bot.discord.jda
   (:require
    [taoensso.telemere :refer [log!]]
-   [discord-bot.http.core :as http])
+   [discord-bot.discord.proxy :as proxy])
   (:import
-   (java.util EnumSet List Collection)
+   (java.util List Collection)
    (java.util.concurrent CompletableFuture TimeoutException TimeUnit)
    (net.dv8tion.jda.api JDA JDABuilder)
    (net.dv8tion.jda.api.entities User)
@@ -12,8 +12,6 @@
    (net.dv8tion.jda.api.events StatusChangeEvent)
    (net.dv8tion.jda.api.events.session ReadyEvent SessionDisconnectEvent ShutdownEvent)
    (net.dv8tion.jda.api.hooks ListenerAdapter)
-   (net.dv8tion.jda.api.interactions IntegrationType InteractionContextType)
-   (net.dv8tion.jda.api.interactions.commands.build Commands)
    (net.dv8tion.jda.api.components.actionrow ActionRow)
    (net.dv8tion.jda.api.components.buttons Button)
    (net.dv8tion.jda.api.entities.channel.middleman MessageChannel)
@@ -23,12 +21,6 @@
 (set! *warn-on-reflection* true)
 
 (def ^:private send-message-timeout-seconds 10)
-
-
-(defn ping-command-data []
-  (doto (Commands/slash "ping" "Basic health check for the bot")
-    (.setIntegrationTypes (EnumSet/of IntegrationType/USER_INSTALL))
-    (.setContexts (EnumSet/of InteractionContextType/BOT_DM))))
 
 
 (defn- require-bot-token! [discord-bot-token]
@@ -86,7 +78,7 @@
 
 (defn connect! [{:keys [discord-bot-token discord-proxy-url discord-timeout]} handlers]
   (let [builder (doto (JDABuilder/createDefault (require-bot-token! discord-bot-token))
-                  (http/apply-to-builder discord-proxy-url discord-timeout)
+                  (proxy/apply-to-builder discord-proxy-url discord-timeout)
                   (.addEventListeners (into-array Object [(create-listener handlers)])))]
     (.awaitReady ^JDA (.build ^JDABuilder builder))))
 
