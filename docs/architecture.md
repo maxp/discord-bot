@@ -5,20 +5,19 @@
 ## Что здесь нужно держать
 
 - основные namespace и их ответственность;
-- поток данных: startup -> gateway connection -> event handling -> command dispatch -> response;
+- поток данных: startup -> gateway connection -> event handling -> response;
 - где проходит граница между Discord transport и бизнес-логикой;
-- как организованы обработчики команд и событий;
+- как организованы обработчики событий;
 - как устроены logging, error handling и retry/reconnect behavior.
 
 ## Целевая структура
 
-Текущая структура:
+Целевая структура:
 
 - entrypoint приложения;
 - gateway transport слой;
 - JDA interop слой;
 - слой работы с Discord API и REST-вызовами;
-- слой команд;
 - слой доменной логики;
 - слой конфигурации.
 
@@ -26,16 +25,28 @@
 
 - [src/discord_bot/main.clj](/home/maxp/wrk/discord-bot/src/discord_bot/main.clj) запускает mount-based lifecycle;
 - [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj) поднимает и останавливает runtime;
-- [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и command registration;
-- [src/discord_bot/discord/http_proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/http_proxy.clj) содержит parsing и применение HTTP proxy settings к JDA REST и Gateway/WebSocket transport.
+- [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и helper для отправки DM;
+- [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj) содержит parsing и применение HTTP proxy settings к JDA REST и Gateway/WebSocket transport;
+- [src/discord_bot/config.clj](/home/maxp/wrk/discord-bot/src/discord_bot/config.clj) читает runtime config из environment и `build-info.edn` из classpath resource.
+
+Текущий поток запуска:
+
+1. `discord-bot.main/-main` читает конфигурацию через `load-config`.
+2. `mount/start-with-args` передает конфигурацию в mount state.
+3. `discord-bot.app.core/conn` вызывает `jda/connect!`.
+4. `jda/connect!` создает `JDABuilder`, применяет proxy/timeout settings, регистрирует listener и ожидает `.awaitReady`.
+
+Текущий поток событий:
+
+- `MessageReceivedEvent` игнорирует bot authors и передает `:user-id` и `:content` в `:on-message`;
+- `ButtonInteractionEvent` делает `deferEdit` и передает `:button-id`, `:message-id` и `:user-id` в `:on-button`;
+- `ReadyEvent`, `SessionDisconnectEvent`, `ShutdownEvent` и `StatusChangeEvent` сейчас только логируются.
 
 ## Критичные вопросы
 
 Этот документ должен отвечать на вопросы:
 
-- где начинается обработка события;
-- где создаётся и поддерживается gateway session;
-- где регистрируются slash-команды;
-- где собираются ответы для Discord;
-- где безопасно добавлять новую команду;
-- где искать причины reconnect или rate-limit проблем.
+- обработка события начинается в `discord-bot.discord.jda/create-listener`;
+- gateway session создается и поддерживается внутри `JDA`;
+- отправка DM-сообщений находится в `discord-bot.discord.jda/send-message`;
+- причины reconnect и shutdown нужно начинать смотреть по логам `onSessionDisconnect`, `onShutdown` и `onStatusChange`.

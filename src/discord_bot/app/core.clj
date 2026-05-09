@@ -26,18 +26,13 @@
 ;;                :user-id "128868114438811111", :content "hello"}
 
 
-
 (defstate conn
-  :start
-  (let [cfg (args)
-        _ (log! ["starting bot:" {:app-id (:discord-app-id cfg)}])
-        ^JDA connection (jda/connect! cfg handlers)]
-    (log! ["jda connection status:" (str (.getStatus connection))])
-    connection
-    )
-  :stop
-  (do
-    (log! ["stopping bot runtime:" conn])
-    (when conn
-      (jda/disconnect! conn))
-    ))
+  :start (let [cfg (args)
+               _ (log! ["starting bot:" {:app-id (:discord-app-id cfg)}])
+               ^JDA connection (jda/connect! cfg handlers)]
+           (log! ["jda connection status:" (str (.getStatus connection))])
+           connection)
+  :stop (do
+          (log! ["stopping bot runtime:" conn])
+          (when conn
+            (jda/disconnect! conn))))

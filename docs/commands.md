@@ -31,3 +31,10 @@
 - разработчику, который добавляет новую команду;
 - тестировщику, который проверяет поведение;
 - автору README или пользовательской справки.
+
+## Текущие event handlers
+
+Пока основной command dispatch не выделен, runtime содержит scaffold-handlers:
+
+- `MessageReceivedEvent` передает `:user-id` и `:content` в `:on-message`;
+- `ButtonInteractionEvent` передает `:button-id`, `:message-id` и `:user-id` в `:on-button`.

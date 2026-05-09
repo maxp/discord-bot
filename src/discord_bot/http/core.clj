@@ -3,7 +3,7 @@
    [clojure.string :as str])
   (:import
    (com.neovisionaries.ws.client WebSocketFactory)
-   (java.net InetSocketAddress Proxy Proxy$Type URI)
+   (java.net InetSocketAddress Proxy Proxy$Type URI URISyntaxException)
    (java.util.concurrent TimeUnit)
    (net.dv8tion.jda.api JDABuilder)
    (okhttp3 Authenticator Credentials OkHttpClient$Builder Response)))
@@ -20,10 +20,18 @@
     nil))
 
 
-(defn parse-proxy-url
+(defn- redact-proxy-url
+  "Removes user:password from a proxy URL for safe logging/error reporting."
   [^String proxy-url]
+  (str/replace proxy-url #"://[^@]+@" "://<redacted>@"))
+
+
+(defn parse-proxy-url [^String proxy-url]
   (when (not-empty proxy-url)
-    (let [uri (URI. proxy-url)
+    (let [^URI uri (try (URI. proxy-url)
+                        (catch URISyntaxException e
+                          (throw (ex-info "Proxy URL is malformed"
+                                          {:proxy-url (redact-proxy-url proxy-url)} e))))
           scheme (.getScheme uri)
           host (.getHost uri)
           port (let [raw-port (.getPort uri)]
@@ -31,16 +39,16 @@
                    (default-port scheme)
                    raw-port))
           [username password] (when-let [user-info (.getUserInfo uri)]
-                                (str/split user-info #":" 2))]
+                                 (str/split user-info #":" 2))]
       (when-not (#{"http" "https"} (some-> scheme str/lower-case))
         (throw (ex-info "Proxy URL must use http or https scheme"
-                        {:proxy-url proxy-url})))
+                        {:proxy-url (redact-proxy-url proxy-url)})))
       (when-not host
         (throw (ex-info "Proxy URL must include a host"
-                        {:proxy-url proxy-url})))
+                        {:proxy-url (redact-proxy-url proxy-url)})))
       (when-not port
         (throw (ex-info "Proxy URL must include a port or use a default for http/https"
-                        {:proxy-url proxy-url})))
+                        {:proxy-url (redact-proxy-url proxy-url)})))
       {:url proxy-url
        :uri uri
        :scheme scheme
@@ -56,7 +64,10 @@
     (reify Authenticator
       (authenticate
         [_ _ response]
-        (when-not (.header ^Response response "Proxy-Authorization")
+        ;; Check the *request* that triggered this 407, not the response headers.
+        ;; If we already sent Proxy-Authorization and still got 407, credentials
+        ;; are wrong — return nil to stop retrying and avoid an infinite loop.
+        (when-not (.header (.request ^Response response) "Proxy-Authorization")
           (-> (.request ^Response response)
               (.newBuilder)
               (.header "Proxy-Authorization"

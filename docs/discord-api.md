@@ -10,7 +10,7 @@
 - какие intents включены и почему;
 - какие scopes, integration types и install settings нужны для установки;
 - какие interaction contexts поддерживает проект;
-- как проект работает с slash commands, components и permissions;
+- как проект работает с interactions, components и permissions;
 - ограничения и риски: rate limits, reconnects, interaction deadlines.
 
 ## Рекомендуемые официальные документы
@@ -20,7 +20,6 @@
 - OAuth2
 - Permissions
 - Interactions Overview
-- Application Commands
 - Receiving and Responding to Interactions
 - Message Components / Component Reference
 
@@ -31,8 +30,6 @@
 - Troubleshooting interactions: https://jda.wiki/using-jda/troubleshooting/
 - `JDABuilder` API: https://docs.jda.wiki/net/dv8tion/jda/api/JDABuilder.html
 - `ListenerAdapter` API: https://docs.jda.wiki/net/dv8tion/jda/api/hooks/ListenerAdapter.html
-- `SlashCommandInteractionEvent` API: https://docs.jda.wiki/net/dv8tion/jda/api/events/interaction/command/SlashCommandInteractionEvent.html
-- `CommandData` API: https://docs.jda.wiki/net/dv8tion/jda/api/interactions/commands/build/CommandData.html
 - `InteractionContextType` API: https://docs.jda.wiki/net/dv8tion/jda/api/interactions/InteractionContextType.html
 - `IntegrationType` API: https://docs.jda.wiki/net/dv8tion/jda/api/interactions/IntegrationType.html
 
@@ -44,9 +41,17 @@
 - работает ли бот только в DM и какие ограничения из этого следуют;
 - используется ли только `USER_INSTALL` и как проект исключает `GUILD_INSTALL`;
 - используется ли только `BOT_DM` context и как проект исключает `PRIVATE_CHANNEL` и `GUILD`;
-- используются ли guild-specific registration или проект полностью избегает guild command surface;
 - какие permissions нужны боту;
 - используем ли message content intent;
 - как обрабатываются deferred responses;
 - есть ли ограничения по размеру сообщений, embeds и components;
 - какие edge cases уже встречались в проде или на тестовом сервере.
+
+## Текущее использование в коде
+
+- Gateway connection создается через `JDABuilder/createDefault` в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
+- Listener реализован через `ListenerAdapter`.
+- Сейчас listener обрабатывает `ReadyEvent`, `StatusChangeEvent`, `SessionDisconnectEvent`, `ShutdownEvent`, `MessageReceivedEvent` и `ButtonInteractionEvent`.
+- `MessageReceivedEvent` игнорирует сообщения от bot users и читает raw content через `getContentRaw`.
+- `ButtonInteractionEvent` вызывает `deferEdit` перед передачей события в app handler.
+- `DISCORD_PROXY_URL`, если задан, применяется к REST HTTP client и WebSocket factory через [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj).

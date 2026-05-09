@@ -11,7 +11,7 @@
 
 
 (deftest build-info-loads-from-resource
-  (let [build-info (config/build-info)]
+  (let [build-info config/build-info]
     (is (map? build-info))
     (is (= "discord-bot" (:appname build-info)))
     (is (= "dev" (:version build-info)))))

@@ -33,15 +33,15 @@ Accepted
 - слой интеграции с Discord обязан поддерживать постоянное gateway-соединение;
 - transport-слой должен обрабатывать identify, heartbeat, reconnect и resume;
 - обработка входящих Discord-событий должна начинаться из gateway event loop;
-- slash commands и interactions остаются частью продукта, но работают поверх gateway-based runtime, а не вместо него.
-- Clojure-код проекта должен взаимодействовать с Discord runtime через JDA listeners, entities и command builders, а не через отдельную Clojure-native Discord библиотеку.
+- interactions остаются частью продукта, но работают поверх gateway-based runtime, а не вместо него.
+- Clojure-код проекта должен взаимодействовать с Discord runtime через JDA listeners и entities, а не через отдельную Clojure-native Discord библиотеку.
 
 ## Consequences
 
-- Архитектура проекта теперь должна исходить из event-driven потока `startup -> gateway connect -> event dispatch -> command handling -> response`.
+- Архитектура проекта теперь должна исходить из event-driven потока `startup -> gateway connect -> event dispatch -> response`.
 - В документации и коде не следует моделировать bot runtime как обычное Ring-приложение, которое только принимает входящие interactions по HTTP.
 - Основные технические риски смещаются в сторону reconnect behavior, shard/session lifecycle, rate limits и устойчивости long-lived соединения.
-- Слой Discord transport должен быть отделен от бизнес-логики, чтобы обработчики команд не зависели от деталей gateway protocol.
+- Слой Discord transport должен быть отделен от бизнес-логики, чтобы обработчики событий не зависели от деталей gateway protocol.
 - Поздняя замена gateway-first подхода на interaction-only HTTP модель будет архитектурным изменением, а не локальной заменой библиотеки.
 - Проект сознательно принимает Java interop как часть технического стека ради более зрелой и актуальной Discord library surface.
 
@@ -49,5 +49,4 @@ Accepted
 
 - JDA getting started: https://jda.wiki/using-jda/getting-started/
 - JDA interactions guide: https://jda.wiki/using-jda/interactions/
-- JDA `CommandData` API: https://docs.jda.wiki/net/dv8tion/jda/api/interactions/commands/build/CommandData.html
 - JDA releases: https://github.com/DV8FromTheWorld/JDA/releases

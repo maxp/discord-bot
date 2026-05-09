@@ -5,6 +5,7 @@ This repository contains a Discord bot project in Clojure.
 ## Quick Start
 
 - Требуются установленные `make` и `clojure` CLI.
+- Локальный файл `.env` обязателен; стартовые имена переменных см. в `.env.example`.
 - `make run`: запускает текущий entrypoint приложения.
 - `make dev`: поднимает проект в dev mode.
 - `make test`: запускает тесты.
@@ -26,4 +27,4 @@ This repository contains a Discord bot project in Clojure.
 ## Stack Notes
 
 - Discord runtime строится на `JDA` через Java interop из Clojure.
-- Бот ориентирован на `Gateway`, `USER_INSTALL` и `BOT_DM` only.
+- Runtime подключается к Discord Gateway через `JDA`.

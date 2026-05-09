@@ -11,7 +11,7 @@
    (or (System/getenv name) default)))
 
 
-(defn build-info []
+(def build-info
   (-> "build-info.edn" io/resource slurp edn/read-string))
 
 
@@ -20,4 +20,4 @@
    :discord-app-id    (env-str "DISCORD_APP_ID")
    :discord-proxy-url (env-str "DISCORD_PROXY_URL")
    :discord-timeout   (parse-long (env-str "DISCORD_TIMEOUT" "20"))
-   :build-info (build-info)})
+   :build-info build-info})

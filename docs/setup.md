@@ -21,29 +21,26 @@
 - создано приложение в Discord Developer Portal;
 - создан bot user для приложения;
 - получен bot token;
-- выбрана версия `JDA` для interop;
-- заранее выбраны intents, `USER_INSTALL` и `BOT_DM` как единственный command context.
+- выбрана версия `JDA` для interop.
 
 ## Базовые шаги
 
 1. Создать приложение в Discord Developer Portal.
 2. Включить bot user и сохранить token в переменную окружения.
-3. Настроить нужные intents.
-4. Включить `USER_INSTALL` и убедиться, что команды доступны только в `BOT_DM`.
-5. Не настраивать `GUILD_INSTALL`, `GUILD` и `PRIVATE_CHANNEL`, если для них нет отдельного документированного основания.
-6. Запустить приложение локально и проверить подключение к Discord Gateway.
+3. Настроить intents под текущий сценарий запуска.
+4. Запустить приложение локально и проверить подключение к Discord Gateway.
 
 ## Переменные окружения
 
-Минимальный набор нужно зафиксировать после появления runtime-кода:
+Текущий runtime читает переменные через [src/discord_bot/config.clj](/home/maxp/wrk/discord-bot/src/discord_bot/config.clj):
 
 - `DISCORD_BOT_TOKEN`
-- `DISCORD_APPLICATION_ID`
-- `DISCORD_PUBLIC_KEY`
+- `DISCORD_APP_ID`
 
 Опционально:
 
 - `DISCORD_PROXY_URL` для проксирования Discord REST и Gateway traffic через `http` или `https` URL.
+- `DISCORD_TIMEOUT` для HTTP/WebSocket timeout в секундах, значение по умолчанию `20`.
 
 Локальное окружение проекта хранится в `.env`.
 Если появятся дополнительные интеграции, добавлять их сюда, а не держать только в коде.
@@ -56,26 +53,24 @@
 - если проекту нужен шаблон переменных, его стоит хранить отдельно, например в `.env.example`.
 - текущий рекомендуемый шаблон переменных уже хранится в `.env.example`.
 
-## Что документировать после реализации
+## Что еще нужно документировать после реализации
 
-- точную команду локального запуска;
-- используемые Clojure aliases;
-- как создаётся и инициализируется `JDABuilder` из Clojure;
-- способ регистрации slash-команд;
 - какие intents реально нужны проекту;
 - какие install settings и command contexts реально нужны проекту;
-- где хранится локальная конфигурация для разработки.
+- где будет жить основной dispatch входящих событий.
 
 Текущее состояние:
 
 - приложение подключается к Discord Gateway через `JDA`;
-- минимальная команда `/ping` регистрируется как `USER_INSTALL` и `BOT_DM` only;
+- [Makefile](/home/maxp/wrk/discord-bot/Makefile) является основным интерфейсом для `run`, `dev`, `test`, `lint` и `outdated`;
+- [deps.edn](/home/maxp/wrk/discord-bot/deps.edn) содержит aliases `:dev`, `:test`, `:test-run`, `:lint` и `:outdated`;
+- `JDABuilder` создается в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj);
+- текущий listener принимает `MessageReceivedEvent` и `ButtonInteractionEvent` и передает данные в scaffold-handlers из [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj);
 - если задан `DISCORD_PROXY_URL`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport через [src/discord_bot/http/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/http/core.clj);
-- listener registration и command registration находятся в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
+- listener registration находится в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
 
 ## Полезные ссылки
 
 - JDA getting started: https://jda.wiki/using-jda/getting-started/
 - JDA interactions examples: https://jda.wiki/using-jda/interactions/
-- `CommandData` builder API: https://docs.jda.wiki/net/dv8tion/jda/api/interactions/commands/build/CommandData.html
 - Discord user-install tutorial: https://docs.discord.com/developers/tutorials/developing-a-user-installable-app

@@ -7,14 +7,13 @@
    (java.util.concurrent CompletableFuture TimeoutException TimeUnit)
    (net.dv8tion.jda.api JDA JDABuilder)
    (net.dv8tion.jda.api.entities User)
-   (net.dv8tion.jda.api.events.interaction.command SlashCommandInteractionEvent)
    (net.dv8tion.jda.api.events.interaction.component ButtonInteractionEvent)
    (net.dv8tion.jda.api.events.message MessageReceivedEvent)
    (net.dv8tion.jda.api.events StatusChangeEvent)
    (net.dv8tion.jda.api.events.session ReadyEvent SessionDisconnectEvent ShutdownEvent)
    (net.dv8tion.jda.api.hooks ListenerAdapter)
    (net.dv8tion.jda.api.interactions IntegrationType InteractionContextType)
-   (net.dv8tion.jda.api.interactions.commands.build CommandData Commands)
+   (net.dv8tion.jda.api.interactions.commands.build Commands)
    (net.dv8tion.jda.api.components.actionrow ActionRow)
    (net.dv8tion.jda.api.components.buttons Button)
    (net.dv8tion.jda.api.entities.channel.middleman MessageChannel)
@@ -33,7 +32,7 @@
 
 
 (defn- require-bot-token! [discord-bot-token]
-  (when-not (seq discord-bot-token)
+  (when-not (not-empty discord-bot-token)
     (throw (ex-info "discord-bot-token is empty" {})))
   discord-bot-token)
 
@@ -92,29 +91,33 @@
     (.awaitReady ^JDA (.build ^JDABuilder builder))))
 
 
-(defn disconnect!
-  [^JDA jda]
+(defn disconnect! [^JDA jda]
   (when jda
     (.shutdown jda)))
 
 
 (defn- ->button
-  [{:keys [id label style]}]
-  (let [style-kw (or style :primary)
-        ^String id-str (name id)
+  [{:keys [id url label style]}]
+  (let [style-kw   (or style :primary)
+        ^String id-str    (str id)
         ^String label-str (str label)]
     (case style-kw
       :primary   (. Button (primary id-str label-str))
       :secondary (. Button (secondary id-str label-str))
       :success   (. Button (success id-str label-str))
       :danger    (. Button (danger id-str label-str))
-      :link      (. Button (link id-str label-str))
+      :link      (if-let [^String url-str (not-empty (str url))]
+                   (. Button (link url-str label-str))
+                   (throw (ex-info "link button requires a non-empty :url" {:label label})))
       (. Button (primary id-str label-str)))))
 
 
 (defn send-message
   "Send a text message to a user via DM.
-   buttons - optional vector of button maps with keys: :id, :label, :style (optional, defaults to :primary).
+   buttons - optional vector of button maps:
+     non-link: {:id \"action:id\" :label \"Text\" :style :primary/:secondary/:success/:danger}
+     link:     {:url \"https://example.com\" :label \"Text\" :style :link}
+   :style defaults to :primary.
    Returns {:ok true :data msg} on success, {:ok false :error err} on failure."
   ([^JDA jda ^String user-id ^String text]
    (send-message jda user-id text nil))
@@ -125,11 +128,14 @@
            ^MessageChannel channel (.complete channel-rest)
            action (cond-> (.sendMessage channel text)
                     (seq buttons)
-                    (.setComponents ^java.util.List (java.util.Collections/singletonList
+                     (.setComponents ^List (java.util.Collections/singletonList
                                                      (ActionRow/of ^Collection (mapv ->button buttons)))))
            future (.submit ^MessageCreateAction action)
            msg (.get ^CompletableFuture future send-message-timeout-seconds TimeUnit/SECONDS)]
        {:ok true :data msg})
+     (catch InterruptedException e
+       (.interrupt (Thread/currentThread))
+       {:ok false :error e})
      (catch TimeoutException e
        {:ok false :error e})
      (catch Exception e
