@@ -32,9 +32,9 @@
 - тестировщику, который проверяет поведение;
 - автору README или пользовательской справки.
 
-## Текущие event handlers
+## Текущий dispatch
 
-Пока основной command dispatch не выделен, runtime содержит scaffold-handlers:
+Пока полноценный command dispatch еще не реализован, runtime использует scaffold-dispatch в `src/discord_bot/app/dispatch.clj`:
 
 - `MessageReceivedEvent` передает `:user-id` и `:content` в `:on-message`;
 - `ButtonInteractionEvent` передает `:button-id`, `:message-id` и `:user-id` в `:on-button`.

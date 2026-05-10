@@ -1,10 +1,10 @@
 (ns discord-bot.main
   (:gen-class)
   (:require
-    [discord-bot.app.core]
-    [discord-bot.config :refer [build-info load-config]]
-    [mount.core :as mount]
-    [taoensso.telemere :refer [log!]]))
+     [discord-bot.app.core]
+     [discord-bot.config :refer [build-info load-config validate-config!]]
+     [mount.core :as mount]
+     [taoensso.telemere :refer [log!]]))
 
 (set! *warn-on-reflection* true)
 
@@ -18,7 +18,7 @@
                                   (mount/stop)
                                   (catch Throwable ex
                                     (log! :error ["shutdown hook failed" ex])))))
-    (let [cfg (load-config)
+    (let [cfg (validate-config! (load-config))
           mnt (mount/start-with-args cfg)]
       (log! ["system started:" (:started mnt)])
       mnt)

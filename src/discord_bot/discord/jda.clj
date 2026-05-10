@@ -38,14 +38,13 @@
     (onButtonInteraction [^ButtonInteractionEvent event]
       (-> (.deferEdit event)
           (.queue))
-      (when on-button
-        (let [button-id  (.getComponentId event)
-              message-id (.getMessageId event)
-              user-id    (.. event getUser getId)]
-          (on-button {:event      event
-                      :button-id  button-id
-                      :message-id message-id
-                      :user-id    user-id}))))
+      (let [button-id  (.getComponentId event)
+            message-id (.getMessageId event)
+            user-id    (.. event getUser getId)]
+        (on-button {:event      event
+                    :button-id  button-id
+                    :message-id message-id
+                    :user-id    user-id})))
 
     (onSessionDisconnect [^SessionDisconnectEvent event]
       (log! :warn ["discord session disconnected"
@@ -63,14 +62,13 @@
               :new (str (.getNewValue event))}]))
 
     (onMessageReceived [^MessageReceivedEvent event]
-      (when on-message
-        (let [^User author (.getAuthor event)]
-          (when-not (.isBot author)
-            (let [content (.. event getMessage getContentRaw)
-                  user-id (.getId author)]
-              (on-message {:event   event
-                           :user-id user-id
-                           :content content}))))))))
+      (let [^User author (.getAuthor event)]
+        (when-not (.isBot author)
+          (let [content (.. event getMessage getContentRaw)
+                user-id (.getId author)]
+            (on-message {:event   event
+                         :user-id user-id
+                         :content content})))))))
 
 ;; (.. event getAuthor getId)   ;; "123456789012345678"
 ;; (.. event getMessage getContentRaw)   ;; "@Max hello"

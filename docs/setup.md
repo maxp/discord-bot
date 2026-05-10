@@ -45,6 +45,20 @@
 - `DISCORD_TIMEOUT` для HTTP/WebSocket timeout в секундах, значение по умолчанию `20`.
 - `DISCORD_CALLBACK_HOST` для адреса, на котором слушает callback HTTP-сервер (default: `localhost`).
 - `DISCORD_CALLBACK_PORT` для порта callback HTTP-сервера (default: `8131`).
+- `DISCORD_CALLBACK_PATH` для пути callback endpoint (default: `/discord/callback`).
+
+На startup конфиг валидируется сразу. Минимально обязательны:
+
+- `DISCORD_BOT_TOKEN`
+- `DISCORD_APP_ID`
+- `DISCORD_APP_SECRET`
+- `DISCORD_CALLBACK_URL`
+
+Дополнительно runtime требует:
+
+- `DISCORD_TIMEOUT` должен быть положительным целым числом;
+- `DISCORD_CALLBACK_PORT` должен быть положительным целым числом;
+- `DISCORD_CALLBACK_PATH` должен начинаться с `/`.
 
 Локальное окружение проекта хранится в `.env`.
 Если появятся дополнительные интеграции, добавлять их сюда, а не держать только в коде.
@@ -69,9 +83,9 @@
 - [Makefile](/home/maxp/wrk/discord-bot/Makefile) является основным интерфейсом для `run`, `dev`, `test`, `lint` и `outdated`;
 - [deps.edn](/home/maxp/wrk/discord-bot/deps.edn) содержит aliases `:dev`, `:test`, `:test-run`, `:lint` и `:outdated`;
 - `JDABuilder` создается в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj);
-- текущий listener принимает `MessageReceivedEvent` и `ButtonInteractionEvent` и передает данные в scaffold-handlers из [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj);
+- текущий listener принимает `MessageReceivedEvent` и `ButtonInteractionEvent` и передает данные в scaffold-dispatch из [src/discord_bot/app/dispatch.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/dispatch.clj);
 - если задан `DISCORD_PROXY_URL`, прокси применяется и к JDA REST, и к Gateway/WebSocket transport через [src/discord_bot/discord/proxy.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/proxy.clj);
-- прямые Discord REST-вызовы `oauth2/token` и `users/@me` находятся в [src/discord_bot/discord/api.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/api.clj) и получают OAuth2 client credentials через аргументы вызова, а не через глобальный config;
+- прямые Discord REST-вызовы разделены между [src/discord_bot/discord/oauth.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/oauth.clj), [src/discord_bot/discord/users.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/users.clj) и [src/discord_bot/discord/rest.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/rest.clj), и получают OAuth2 client credentials через аргументы вызова, а не через глобальный config;
 - listener registration находится в [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj).
 
 ## Полезные ссылки
