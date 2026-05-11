@@ -6,7 +6,7 @@
 - Use `deps.edn` for dependency management and aliases.
 - Use `Makefile` as the primary entrypoint for recurring developer commands.
 - `.env` is mandatory in the local working copy and is always loaded for dev commands.
-- In development and test flows, `build-info.edn` is expected on the `dev/` classpath.
+- `build-info.edn` is expected on the classpath (lives in `resources/` and is available in all flows).
 
 ## Change Rules
 

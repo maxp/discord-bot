@@ -10,6 +10,11 @@ This repository contains a Discord bot project in Clojure.
 - `make dev`: поднимает проект в dev mode.
 - `make test`: запускает тесты.
 - `make lint`: запускает `clj-kondo` для `src` и `test`.
+- `make outdated`: проверяет устаревшие зависимости через `antq`.
+- `make repl`: алиас для `make dev`.
+- `make tunnel-up`: поднимает SSH reverse tunnel к `vsp` (порт `8131`).
+- `make tunnel-down`: останавливает SSH tunnel.
+- `make tunnel-status`: проверяет статус SSH tunnel.
 
 ## Documentation
 

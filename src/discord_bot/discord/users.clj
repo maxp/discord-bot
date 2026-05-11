@@ -2,7 +2,7 @@
   (:require
    [discord-bot.discord.rest :as rest])
   (:import
-   (okhttp3 Request Request$Builder)))
+   (okhttp3 Request$Builder)))
 
 
 (set! *warn-on-reflection* true)

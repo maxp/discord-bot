@@ -29,7 +29,7 @@
 - [src/discord_bot/app/dispatch.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/dispatch.clj) содержит scaffold-dispatch для message и button событий;
 - [src/discord_bot/app/handlers.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/handlers.clj) собирает обработчики runtime с уже связанными зависимостями;
 - [src/discord_bot/discord/jda.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/jda.clj) содержит `JDA` interop, listener registration и helper для отправки DM;
-- [src/discord_bot/discord/callback.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/callback.clj) содержит HTTP-сервер для обработки OAuth2 callback на порту `8131` и не знает о runtime config или Discord REST;
+- [src/discord_bot/discord/callback.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/callback.clj) содержит HTTP-сервер для обработки OAuth2 callback на порту `8131`; сам модуль не импортирует config или REST, но receives runtime config и REST-поведение через замыкание, переданное из [src/discord_bot/app/core.clj](/home/maxp/wrk/discord-bot/src/discord_bot/app/core.clj);
 - [src/discord_bot/discord/rest.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/rest.clj) содержит общий OkHttp client и общие REST helper-функции;
 - [src/discord_bot/discord/oauth.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/oauth.clj) содержит OAuth2 authorize URL и token exchange;
 - [src/discord_bot/discord/users.clj](/home/maxp/wrk/discord-bot/src/discord_bot/discord/users.clj) содержит user-related Discord REST вызовы;

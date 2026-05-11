@@ -40,7 +40,7 @@
 
 - убедиться, что `.env` существует;
 - проверить, что `make run` загружает `.env`;
-- ошибка из `discord-bot.discord.jda/require-bot-token!` будет иметь сообщение `discord-bot-token is empty`.
+- ошибка из приватной функции `require-bot-token!` (в `discord-bot.discord.jda`) будет иметь сообщение `discord-bot-token is empty`.
 
 ### Прокси не применяется или задан неверно
 

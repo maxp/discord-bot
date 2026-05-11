@@ -3,7 +3,7 @@
    [discord-bot.discord.rest :as rest])
   (:import
    (java.net URLEncoder)
-   (okhttp3 Credentials Request Request$Builder)))
+   (okhttp3 Credentials Request$Builder)))
 
 
 (set! *warn-on-reflection* true)

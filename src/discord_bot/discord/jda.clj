@@ -117,7 +117,7 @@
            ^CacheRestAction channel-rest (.openPrivateChannel user)
            ^MessageChannel channel (.complete channel-rest)
            action (cond-> (.sendMessage channel text)
-                    (seq buttons)
+                     (not-empty buttons)
                      (.setComponents ^List (java.util.Collections/singletonList
                                                      (ActionRow/of ^Collection (mapv ->button buttons)))))
            future (.submit ^MessageCreateAction action)
